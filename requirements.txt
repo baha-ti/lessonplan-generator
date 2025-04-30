@@ -5,4 +5,5 @@ openai==0.27.0
 functions-framework==3.*
 firebase-admin==6.0.1
 gunicorn==20.1.0
-python-docx==0.8.11 
+python-docx==0.8.11
+flask-cors==4.0.0 
