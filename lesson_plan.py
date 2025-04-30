@@ -66,22 +66,106 @@ def calculate_time_distribution(lesson_duration, grade_level):
     
     return time_distribution
 
-def generate_lesson_plan(main_learningactivity, grade_level, lesson_duration, time_distribution, lesson_type="regular"):
+def generate_specific_activities(main_learningactivity, grade_level, lesson_duration, time_distribution, lesson_type="regular", subject=None):
+    """
+    Generate specific learning activities for the main learning activity.
+    Returns a JSON with the specific learning activities and their features.
+    """
+    try:
+        # Create prompt for the OpenAI API
+        prompt = f"""Generate specific learning activities for the following specifications:
+
+        Subject: {subject}
+        Main Learning Activity/ Topic: {main_learningactivity}
+        Grade Level: {grade_level}
+        Lesson Duration: {lesson_duration} minutes
+        Lesson Type: {lesson_type}
+
+        CRITICAL INSTRUCTIONS:
+        1. Each specific learning activity must be an EXACT breakdown of the main learning activity
+        2. When combined, all specific learning activities should form the complete main learning activity
+        3. Maximum of FOUR specific learning activities
+        4. Each activity must start with an action verb (e.g., "define", "analyze", "demonstrate")
+        5. For each specific learning activity, provide specific tasks/problems/scenarios that:
+           • Start with action verbs
+           • Are brief and clear
+           • Will be used in the FOUR STAGES of the lesson plan matrix
+           • Include hands-on experiences where appropriate
+           • Are grade-level appropriate
+           • Directly support achieving the specific learning activity
+
+        Return the specific learning activities in JSON format:
+        {{
+            "Specific_Learning_Activities": {{
+                "1": {{
+                    "Activity": "Activity Title",
+                    "Features": ["Feature 1", "Feature 2"]
+                }},
+                "2": {{
+                    "Activity": "Another Activity Title",
+                    "Features": ["Feature 1", "Feature 2"]
+                }}
+            }}
+        }}
+
+        IMPORTANT: Return valid JSON only. Do not include any extra text.
+        """
+        
+        # Call the OpenAI API
+        response = client.chat.completions.create(
+            model="gpt-3.5-turbo",
+            messages=[
+                {
+                    "role": "system",
+                    "content": (
+                        "You are a professional lesson planner. Your task is to create "
+                        "specific learning activities that break down the main learning activity. "
+                        "Always return valid JSON."
+                    )
+                },
+                {"role": "user", "content": prompt}
+            ],
+            temperature=0.7,
+            max_tokens=1000
+        )
+
+        response_text = response.choices[0].message.content.strip()
+        response_text = response_text.replace("```json", "").replace("```", "").strip()
+        
+        try:
+            activities = json.loads(response_text)
+            return activities
+        except json.JSONDecodeError as e:
+            print(f"JSON parsing failed: {str(e)}\nRaw response: {response_text}")
+            return {"error": "Failed to generate specific learning activities"}
+
+    except Exception as e:
+        print(f"Error generating specific activities: {str(e)}")
+        return {"error": str(e)}
+
+def generate_lesson_plan(main_learningactivity, grade_level, lesson_duration, time_distribution, lesson_type="regular", subject=None, selected_activity=None):
     """
     Generate a lesson plan (regular or project-based) based on the IDDR model and 5E approach.
-    
-    If lesson_type is interdisciplinary, this function delegates to generate_interdisciplinary_lesson_plan.
-    Otherwise, it generates a single-discipline (regular or project) lesson plan.
+    If selected_activity is provided, focus the lesson plan on that specific activity.
     """
     try:
         # If interdisciplinary, forward to specialized function
         if lesson_type and lesson_type.lower() == 'interdisciplinary':
-            return generate_interdisciplinary_lesson_plan(main_learningactivity, grade_level, lesson_duration, time_distribution)
+            return generate_interdisciplinary_lesson_plan(main_learningactivity, grade_level, lesson_duration, time_distribution, subject)
+
+        # First, generate specific learning activities if not provided
+        if not selected_activity:
+            activities = generate_specific_activities(main_learningactivity, grade_level, lesson_duration, time_distribution, lesson_type, subject)
+            if "error" in activities:
+                raise ValueError(activities["error"])
+            return activities
 
         # Create prompt for the OpenAI API
         prompt = f"""Create a detailed lesson plan for the following specifications:
 
-        Main Learning Activity: {main_learningactivity}
+        Subject: {subject}
+        Main Learning Activity/ Topic: {main_learningactivity}
+        Selected Specific Activity: {selected_activity}
         Grade Level: {grade_level}
         Lesson Duration: {lesson_duration} minutes
         Lesson Type: {lesson_type}
@@ -92,128 +176,66 @@ def generate_lesson_plan(main_learningactivity, grade_level, lesson_duration, ti
         - Design: {time_distribution['design']} minutes
         - Realisation: {time_distribution['realisation']} minutes
 
-        CRITICAL INSTRUCTIONS FOR LESSON TYPE: {lesson_type.upper()}
+        CRITICAL INSTRUCTIONS:
+        1. Focus the entire lesson plan on the selected specific activity
+        2. Ensure all stages (Introduction, Competence Development, Design, Realisation) 
+           directly support the selected specific activity
+        3. All teaching and learning activities should be aligned with the selected activity
+        4. Assessment criteria should specifically measure achievement of the selected activity
+        5. Use the following principles as GUIDING PRINCIPLES (do not include them in the output):
+           - Variation Principles:
+             • Introduction: CONTRAST (show differences)
+             • Competence Development: SEPARATION (break down components)
+             • Design: GENERALIZATION (apply to new situations)
+             • Realisation: FUSION (combine all elements)
+           - 5E's Approach:
+             • Introduction: Engage
+             • Competence Development: Explore/Explain
+             • Design: Elaborate
+             • Realisation: Evaluate
 
-        {f'''
-        REGULAR LESSON REQUIREMENTS:
-        1. Adherence to Existing Conditions:
-           - Strictly follow all existing lesson plan conditions
-           - Maintain the provided learning activity exactly as specified
-           - Ensure grade-level appropriateness
-           - Follow established lesson plan structure
-           - Adhere to curriculum standards
-
-        2. Single-Discipline Focus:
-           - Maintain content strictly within a single discipline
-           - DO NOT introduce any interdisciplinary elements
-           - Focus on depth of understanding within the specific subject
-           - Develop subject-specific skills and knowledge
-
-        3. Real-life Examples and Activities:
-           - Integrate relevant real-life examples specific to the discipline
-           - Ensure examples are age-appropriate and contextually relevant
-           - Include practical activities that demonstrate real-world applications
-           - Use examples students can easily relate to
-
-        4. Validation and Adjustment:
-           - Validate that all content strictly matches teacher-provided activity, specified grade level, single-discipline focus
-           - Immediately adjust if the lesson deviates
-
-        5. Stage-Specific Requirements:
-           - INTRODUCTION:
-             • Engage with discipline-specific content
-             • Use real-world examples
-             • Set clear learning objectives
-           - COMPETENCE DEVELOPMENT:
-             • Develop subject-specific knowledge with guided practice
-           - DESIGN:
-             • Deepen understanding of the subject
-             • Include practice exercises with feedback
-           - REALISATION:
-             • Final tasks that demonstrate subject mastery
-             • Evaluate subject-specific understanding
-
-        6. Assessment Criteria Format:
-           - Strictly reflect the tasks students perform
-           - If a student task is to define a function, the criterion is: a function is defined
-           - All in passive present tense, no qualifiers like 'correctly' or 'properly'
-
-        7. Return the plan in JSON format with:
-           • "Main_Learning_Activity"
-           • "Specific_Learning_Activities" with sub-activities
-           • "Lesson_Plan" with IDDR + 5E stages
-           • "Remarks" as a single list
-        ''' if lesson_type and lesson_type.lower() == 'regular' else ''}
-
-        {f'''
-        PROJECT-BASED LESSON REQUIREMENTS:
-        1. Design an extended, hands-on project that spans multiple sessions
-        2. Include clear project goals, deliverables, and success criteria
-        3. Incorporate student choice and autonomy
-        4. Focus on problem-solving and critical thinking
-        5. Use rubrics for project assessment
-        6. Real-world applications and connections
-        7. Collaboration and teamwork
-        ''' if lesson_type and lesson_type.lower() == 'project' else ''}
-
-        The lesson plan should follow the IDDR model and 5E's approach:
-        1. Introduction (Engage) - Variation Principle: CONTRAST
-        2. Competence Development (Explore/Explain) - Variation Principle: SEPARATION
-        3. Design (Elaborate) - Variation Principle: GENERALIZATION
-        4. Realisation (Evaluate) - Variation Principle: FUSION
-
-        SPECIFIC LEARNING ACTIVITIES AND FEATURES FORMAT:
-        - "Main Learning Activity": Must show the user-provided main goal
-        - "Specific_Learning_Activities": Break down the main activity into sub-activities with bullet Features
-        Example:
-        "Specific_Learning_Activities": {{
-            "1": {{
-                "Activity": "Identify Number Positions",
-                "Features": [
-                    "Locate positions of digits",
-                    "Name each place value"
-                ]
-            }},
-            "2": {{
-                "Activity": "Represent Values",
-                "Features": [
-                    "Use base-10 blocks",
-                    "Convert representations"
-                ]
-            }}
-        }}
-
-        "Lesson_Plan": [
-            {{
-                "Stage": "Introduction",
-                "Time (Minutes)": "{time_distribution['introduction']}",
-                "Teaching Activities": "...",
-                "Learning Activities": "...",
-                "Assessment Criteria": "...",
-                "Variation Principle": "CONTRAST",
-                "5E Component": "Engage"
-            }},
-            ...
-        ],
-
-        REMARKS FORMAT:
-        - "Students were able to [...]. However, some students failed [...]. Therefore, I will [...]"
-
-        Return the lesson plan in JSON:
+        Return the lesson plan in JSON format:
         {{
             "Main_Learning_Activity": "{main_learningactivity}",
             "Specific_Learning_Activities": {{
-                "1": {{
-                    "Activity": "Activity Title",
-                    "Features": ["Feature 1", "Feature 2"]
-                }},
-                "2": {{
-                    "Activity": "Another Activity Title",
+                "{selected_activity}": {{
+                    "Activity": "Selected Activity Title",
                     "Features": ["Feature 1", "Feature 2"]
                 }}
             }},
-            "Lesson_Plan": [...],
-            "Remarks": [...]
+            "Lesson_Plan": [
+                {{
+                    "Stage": "Introduction",
+                    "Time (Minutes)": "{time_distribution['introduction']}",
+                    "Teaching Activities": "Activities that engage students with the selected activity",
+                    "Learning Activities": "Tasks that help students explore the selected activity",
+                    "Assessment Criteria": "Criteria that measure engagement with the selected activity"
+                }},
+                {{
+                    "Stage": "Competence Development",
+                    "Time (Minutes)": "{time_distribution['competence_development']}",
+                    "Teaching Activities": "Activities that develop understanding of the selected activity",
+                    "Learning Activities": "Tasks that help students understand the selected activity",
+                    "Assessment Criteria": "Criteria that measure understanding of the selected activity"
+                }},
+                {{
+                    "Stage": "Design",
+                    "Time (Minutes)": "{time_distribution['design']}",
+                    "Teaching Activities": "Activities that deepen understanding of the selected activity",
+                    "Learning Activities": "Tasks that apply the selected activity to new situations",
+                    "Assessment Criteria": "Criteria that measure application of the selected activity"
+                }},
+                {{
+                    "Stage": "Realisation",
+                    "Time (Minutes)": "{time_distribution['realisation']}",
+                    "Teaching Activities": "Activities that evaluate mastery of the selected activity",
+                    "Learning Activities": "Tasks that demonstrate mastery of the selected activity",
+                    "Assessment Criteria": "Criteria that measure mastery of the selected activity"
+                }}
+            ],
+            "Remarks": [
+                "Students were able to [what they were able to do] in relation to the selected activity. However, some students failed [specific areas]. Therefore, I will [remedial actions]."
+            ]
         }}
 
         IMPORTANT: Return valid JSON only. Do not include any extra text.

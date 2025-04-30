@@ -17,12 +17,13 @@ client = OpenAI(
     base_url="https://api.openai.com/v1"
 )
 
-def generate_interdisciplinary_lesson_plan(main_learningactivity, grade_level, lesson_duration, time_distribution):
+def generate_interdisciplinary_lesson_plan(main_learningactivity, grade_level, lesson_duration, time_distribution, subject=None):
     prompt = f"""
     Create a detailed interdisciplinary lesson plan strictly adhering to these standards:
 
     CRITICAL - MAIN LEARNING ACTIVITY INTERPRETATION:
-    Main Learning Activity provided: "{main_learningactivity}"
+    Subject: {subject}
+    Main Learning Activity/ Topic provided: "{main_learningactivity}"
     
     Rules for Main Learning Activity Interpretation (STRICT ADHERENCE REQUIRED):
     1. Learning Outcomes MUST be directly derived from this Main Learning Activity

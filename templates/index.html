@@ -96,24 +96,30 @@
                 </select>
             </div>
             <div class="mb-3">
-                <label class="form-label">Main Learning Activity:</label>
+                <label class="form-label">Subject:</label>
+                <input type="text" class="form-control" name="subject" required placeholder="Enter subject (e.g., Mathematics, English, History)">
+            </div>
+            <div class="mb-3">
+                <label class="form-label">Main Learning Activity/ Topic:</label>
                 <input type="text" class="form-control" name="main_learning_activity" required>
             </div>
             <div class="mb-3">
                 <label class="form-label">Grade Level:</label>
                 <select class="form-control" name="grade_level" required>
-                    <option value="Form1">Form 1</option>
-                    <option value="Form2">Form 2</option>
-                    <option value="Form3">Form 3</option>
-                    <option value="Form4">Form 4</option>
-                    <option value="Form5">Form 5</option>
-                    <option value="Form6">Form 6</option>
-                    <option value="Form7">Form 7</option>
-                    <option value="Form8">Form 8</option>
-                    <option value="Form9">Form 9</option>
-                    <option value="Form10">Form 10</option>
-                    <option value="Form11">Form 11</option>
-                    <option value="Form12">Form 12</option>
+                    <option value="Pre-primary">Pre-primary</option>
+                    <option value="Grade 1">Grade 1</option>
+                    <option value="Grade 2">Grade 2</option>
+                    <option value="Grade 3">Grade 3</option>
+                    <option value="Grade 4">Grade 4</option>
+                    <option value="Grade 5">Grade 5</option>
+                    <option value="Grade 6">Grade 6</option>
+                    <option value="Form 1">Form 1</option>
+                    <option value="Form 2">Form 2</option>
+                    <option value="Form 3">Form 3</option>
+                    <option value="Form 4">Form 4</option>
+                    <option value="Form 5">Form 5</option>
+                    <option value="Form 6">Form 6</option>
+                    <option value="Teacher Education">Teacher Education</option>
                 </select>
             </div>
             <div class="mb-3">
@@ -128,6 +134,18 @@
                 <span class="visually-hidden">Loading...</span>
             </div>
             <p>Generating your lesson plan...</p>
+        </div>
+
+        <div id="specific-activities-container" class="output-container" style="display: none;">
+            <h3>Specific Learning Activities</h3>
+            <div id="specific-activities-list"></div>
+            <div class="mt-3">
+                <label class="form-label">Select which specific learning activity to focus on:</label>
+                <select class="form-control" id="activity-selection" required>
+                    <option value="">Choose an activity...</option>
+                </select>
+                <button onclick="generateSelectedLessonPlan()" class="btn btn-primary mt-3">Generate Lesson Plan for Selected Activity</button>
+            </div>
         </div>
 
         <div id="lesson-output" class="output-container"></div>
@@ -147,10 +165,15 @@ document.getElementById('lessonForm').onsubmit = async (e) => {
     
     const loadingElement = document.getElementById('loading');
     const outputElement = document.getElementById('lesson-output');
+    const specificActivitiesContainer = document.getElementById('specific-activities-container');
+    const specificActivitiesList = document.getElementById('specific-activities-list');
+    const activitySelection = document.getElementById('activity-selection');
     
     // Show loading indicator
     loadingElement.style.display = 'block';
     outputElement.innerHTML = '';
+    specificActivitiesContainer.style.display = 'none';
+    activitySelection.innerHTML = '<option value="">Choose an activity...</option>';
     
     try {
         const formData = new FormData(e.target);
@@ -164,6 +187,82 @@ document.getElementById('lessonForm').onsubmit = async (e) => {
 
         // Log request for debugging
         console.log('Sending request:', requestData);
+
+        const response = await fetch('/generate_specific_activities', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Accept': 'application/json'
+            },
+            body: JSON.stringify(requestData)
+        });
+        
+        if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(errorData.error || `Server error: ${response.status}`);
+        }
+        
+        const data = await response.json();
+        
+        if (data.error) {
+            throw new Error(data.error);
+        }
+
+        // Display specific learning activities
+        let activitiesHTML = '';
+        activitySelection.innerHTML = '<option value="">Choose an activity...</option>';
+        
+        for (const [key, activity] of Object.entries(data.Specific_Learning_Activities)) {
+            activitiesHTML += `
+                <div class="activity-item mb-3">
+                    <h4>Activity ${key}: ${activity.Activity}</h4>
+                    <ul class="feature-list">
+                        ${activity.Features.map(feature => `<li>${feature}</li>`).join('')}
+                    </ul>
+                </div>`;
+            
+            // Add to selection dropdown
+            activitySelection.innerHTML += `<option value="${key}">Activity ${key}: ${activity.Activity}</option>`;
+        }
+        
+        specificActivitiesList.innerHTML = activitiesHTML;
+        specificActivitiesContainer.style.display = 'block';
+        
+        // Store the current activities for later use
+        window.currentActivities = data.Specific_Learning_Activities;
+        window.currentRequestData = requestData;
+
+    } catch (error) {
+        console.error('Error:', error);
+        outputElement.innerHTML = `
+            <div class="alert alert-danger">
+                <h4>Error:</h4>
+                <p>${error.message}</p>
+                <p>Please try again. If the problem persists, contact support.</p>
+            </div>`;
+    } finally {
+        loadingElement.style.display = 'none';
+    }
+};
+
+async function generateSelectedLessonPlan() {
+    const selectedActivity = document.getElementById('activity-selection').value;
+    if (!selectedActivity) {
+        alert('Please select a specific learning activity');
+        return;
+    }
+
+    const loadingElement = document.getElementById('loading');
+    const outputElement = document.getElementById('lesson-output');
+    
+    loadingElement.style.display = 'block';
+    outputElement.innerHTML = '';
+    
+    try {
+        const requestData = {
+            ...window.currentRequestData,
+            selected_activity: selectedActivity
+        };
 
         const response = await fetch('/generate_lesson_plan', {
             method: 'POST',
@@ -185,54 +284,13 @@ document.getElementById('lessonForm').onsubmit = async (e) => {
             throw new Error(data.error);
         }
 
+        // Display the lesson plan
         let outputHTML = '';
 
-        if (requestData.lesson_type === 'interdisciplinary') {
-            // Handle Interdisciplinary Theme
-            if (data.Interdisciplinary_Theme) {
-                outputHTML += `
-                    <div class="theme">
-                        <h3>Interdisciplinary Theme</h3>
-                        <p><strong>Format:</strong> ${data.Interdisciplinary_Theme.Format}</p>
-                        <p><strong>Content:</strong> ${data.Interdisciplinary_Theme.Content}</p>
-                        <p><strong>Integrated Disciplines:</strong> ${data.Interdisciplinary_Theme.Integrated_Disciplines.join(', ')}</p>
-                        <p><strong>Rationale:</strong> ${data.Interdisciplinary_Theme.Rationale}</p>
-                    </div>`;
-            }
-
-            // Handle Learning Outcomes
-            if (data.Learning_Outcomes) {
-                outputHTML += `
-                    <div class="outcomes">
-                        <h3>Learning Outcomes</h3>
-                        <ul>${data.Learning_Outcomes.map(outcome => `<li>${outcome}</li>`).join('')}</ul>
-                    </div>`;
-            }
-        } else {
-            // For regular lessons, show Specific Learning Activities
-            if (data.Specific_Learning_Activities) {
-                outputHTML += `
-                    <div class="specific-activities">
-                        <h3>Specific Learning Activities</h3>`;
-                
-                for (const [key, activity] of Object.entries(data.Specific_Learning_Activities)) {
-                    outputHTML += `
-                        <div class="activity-item mb-3">
-                            <h4>${activity.Activity}</h4>
-                            <ul class="feature-list">
-                                ${activity.Features.map(feature => `<li>${feature}</li>`).join('')}
-                            </ul>
-                        </div>`;
-                }
-                
-                outputHTML += '</div>';
-            }
-        }
-
-        // Handle Lesson Plan Stages for both types
+        // Handle Lesson Plan Stages
         if (data.Lesson_Plan) {
             outputHTML += `
-                <h3>Lesson Plan Stages</h3>
+                <h3>Lesson Plan</h3>
                 <table class="table table-bordered table-hover">
                     <thead>
                         <tr>
@@ -241,8 +299,6 @@ document.getElementById('lessonForm').onsubmit = async (e) => {
                             <th>Teaching Activities</th>
                             <th>Learning Activities</th>
                             <th>Assessment Criteria</th>
-                            <th>Variation Principle</th>
-                            <th>5E Component</th>
                         </tr>
                     </thead>
                     <tbody>`;
@@ -255,15 +311,13 @@ document.getElementById('lessonForm').onsubmit = async (e) => {
                         <td>${stage['Teaching Activities']}</td>
                         <td>${stage['Learning Activities']}</td>
                         <td>${stage['Assessment Criteria']}</td>
-                        <td>${stage['Variation Principle']}</td>
-                        <td>${stage['5E Component']}</td>
                     </tr>`;
             });
             
             outputHTML += '</tbody></table>';
         }
 
-        // Handle Remarks for both types
+        // Handle Remarks
         if (data.Remarks) {
             outputHTML += `
                 <div class="remarks">
@@ -297,7 +351,7 @@ document.getElementById('lessonForm').onsubmit = async (e) => {
     } finally {
         loadingElement.style.display = 'none';
     }
-};
+}
 
 // Add these new functions for customization
 function showCustomizationForm() {
