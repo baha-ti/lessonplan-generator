@@ -139,10 +139,10 @@ def generate_lesson_plan(main_learningactivity, grade_level, lesson_duration, ti
            - All in passive present tense, no qualifiers like 'correctly' or 'properly'
 
         7. Return the plan in JSON format with:
-           • \"Main_Learning_Activity\"
-           • \"Specific_Learning_Activities\" with sub-activities
-           • \"Lesson_Plan\" with IDDR + 5E stages
-           • \"Remarks\" as a single list
+           • "Main_Learning_Activity"
+           • "Specific_Learning_Activities" with sub-activities
+           • "Lesson_Plan" with IDDR + 5E stages
+           • "Remarks" as a single list
         ''' if lesson_type and lesson_type.lower() == 'regular' else ''}
 
         {f'''
@@ -163,57 +163,57 @@ def generate_lesson_plan(main_learningactivity, grade_level, lesson_duration, ti
         4. Realisation (Evaluate) - Variation Principle: FUSION
 
         SPECIFIC LEARNING ACTIVITIES AND FEATURES FORMAT:
-        - \"Main Learning Activity\": Must show the user-provided main goal
-        - \"Specific_Learning_Activities\": Break down the main activity into sub-activities with bullet Features
+        - "Main Learning Activity": Must show the user-provided main goal
+        - "Specific_Learning_Activities": Break down the main activity into sub-activities with bullet Features
         Example:
-        \"Specific_Learning_Activities\": {{
-            \"1\": {{
-                \"Activity\": \"Identify Number Positions\",
-                \"Features\": [
-                    \"Locate positions of digits\",
-                    \"Name each place value\"
+        "Specific_Learning_Activities": {{
+            "1": {{
+                "Activity": "Identify Number Positions",
+                "Features": [
+                    "Locate positions of digits",
+                    "Name each place value"
                 ]
             }},
-            \"2\": {{
-                \"Activity\": \"Represent Values\",
-                \"Features\": [
-                    \"Use base-10 blocks\",
-                    \"Convert representations\"
+            "2": {{
+                "Activity": "Represent Values",
+                "Features": [
+                    "Use base-10 blocks",
+                    "Convert representations"
                 ]
             }}
         }}
 
-        \"Lesson_Plan\": [
+        "Lesson_Plan": [
             {{
-                \"Stage\": \"Introduction\",
-                \"Time (Minutes)\": \"{time_distribution['introduction']}\",
-                \"Teaching Activities\": \"...\",
-                \"Learning Activities\": \"...\",
-                \"Assessment Criteria\": \"...\",
-                \"Variation Principle\": \"CONTRAST\",
-                \"5E Component\": \"Engage\"
+                "Stage": "Introduction",
+                "Time (Minutes)": "{time_distribution['introduction']}",
+                "Teaching Activities": "...",
+                "Learning Activities": "...",
+                "Assessment Criteria": "...",
+                "Variation Principle": "CONTRAST",
+                "5E Component": "Engage"
             }},
             ...
         ],
 
         REMARKS FORMAT:
-        - \"Students were able to [...]. However, some students failed [...]. Therefore, I will [...]\"
+        - "Students were able to [...]. However, some students failed [...]. Therefore, I will [...]"
 
         Return the lesson plan in JSON:
         {{
-            \"Main_Learning_Activity\": \"{main_learningactivity}\",
-            \"Specific_Learning_Activities\": {{
-                \"1\": {{
-                    \"Activity\": \"Activity Title\",
-                    \"Features\": [\"Feature 1\", \"Feature 2\"]
+            "Main_Learning_Activity": "{main_learningactivity}",
+            "Specific_Learning_Activities": {{
+                "1": {{
+                    "Activity": "Activity Title",
+                    "Features": ["Feature 1", "Feature 2"]
                 }},
-                \"2\": {{
-                    \"Activity\": \"Another Activity Title\",
-                    \"Features\": [\"Feature 1\", \"Feature 2\"]
+                "2": {{
+                    "Activity": "Another Activity Title",
+                    "Features": ["Feature 1", "Feature 2"]
                 }}
             }},
-            \"Lesson_Plan\": [...],
-            \"Remarks\": [...]
+            "Lesson_Plan": [...],
+            "Remarks": [...]
         }}
 
         IMPORTANT: Return valid JSON only. Do not include any extra text.
@@ -396,8 +396,8 @@ def customize_lesson_plan(current_lesson_plan, customization, lesson_type=None):
         Lesson Type: {lesson_type if lesson_type else "regular"}
         
         CRITICAL INSTRUCTIONS:
-        1. Keep the Main_Learning_Activity exactly as it is: \"{original_main_activity}\"
-        2. Do not remove keys: \"Main_Learning_Activity\", \"Specific_Learning_Activities\", \"Lesson_Plan\", \"Remarks\"
+        1. Keep the Main_Learning_Activity exactly as it is: "{original_main_activity}"
+        2. Do not remove keys: "Main_Learning_Activity", "Specific_Learning_Activities", "Lesson_Plan", "Remarks"
         3. Maintain IDDR + 5E structure
         4. Keep assessment criteria in passive voice, present tense
         5. Return valid JSON only, with no extra text
